@@ -136,21 +136,19 @@ initcolors(void)
 void
 initimages(void)
 {
+	Point folderpts[] = { 
+		Pt(0, 1), Pt(5,1), Pt(7, 4), Pt(10, 4), 
+		Pt(10, 10), Pt(0, 10), Pt(0, 1)
+	};
+	Point filepts[] = {
+		Pt(1, 1), Pt(7, 1), Pt(7, 4), Pt(10, 4),
+		Pt(10, 11), Pt(1, 11), Pt(1, 1)
+	};
 	folder = allocimage(display, Rect(0, 0, 12, 12), screen->chan, 0, DWhite);
-	line(folder, Pt( 0,  1), Pt( 5,  1), 0, 0, 0, display->black, ZP);
-	line(folder, Pt( 5,  1), Pt( 7,  4), 0, 0, 0, display->black, ZP);
-	line(folder, Pt( 7,  4), Pt(10,  4), 0, 0, 0, display->black, ZP);
-	line(folder, Pt(10,  4), Pt(10, 10), 0, 0, 0, display->black, ZP);
-	line(folder, Pt(10, 10), Pt( 0, 10), 0, 0, 0, display->black, ZP);
-	line(folder, Pt( 0, 10), Pt( 0,  1), 0, 0, 0, display->black, ZP);	
+	poly(folder, folderpts, 7, 0, 0, 0, display->black, ZP);
 	file = allocimage(display, Rect(0, 0, 12, 12), screen->chan, 0, DWhite);
-	line(file, Pt( 1,  1), Pt( 7,  1), 0, 0, 0, display->black, ZP);
-	line(file, Pt( 7,  1), Pt( 7,  4), 0, 0, 0, display->black, ZP);
-	line(file, Pt( 7,  4), Pt(10,  4), 0, 0, 0, display->black, ZP);
-	line(file, Pt(10,  4), Pt(10, 11), 0, 0, 0, display->black, ZP);
-	line(file, Pt(10, 11), Pt( 1, 11), 0, 0, 0, display->black, ZP);
-	line(file, Pt( 1, 11), Pt( 1,  1), 0, 0, 0, display->black, ZP);	
-	line(file, Pt( 7,  1), Pt(10,  4), 0, 0, 0, display->black, ZP);	
+	poly(file, filepts, 7, 0, 0, 0, display->black, ZP);	
+	line(file, Pt( 7,  1), Pt(10,  4), 0, 0, 0, display->black, ZP);
 }
 
 char*
@@ -193,8 +191,8 @@ redraw(void)
 	draw(screen, toolr, toolbg, nil, ZP);
 	line(screen, Pt(toolr.min.x, toolr.max.y), toolr.max, 0, 0, 0, toolfg, ZP);
 	homer = drawbutton(&p, "Home");
-	upr = drawbutton(&p, "Up");
 	cdr = drawbutton(&p, "Cd");
+	upr = drawbutton(&p, "Up");
 	string(screen, p, toolfg, ZP, font, path);
 	draw(screen, scrollr, scrollbg, nil, ZP);
 	if(ndirs>0){
@@ -306,6 +304,8 @@ evtmouse(Mouse m)
 			}
 		}else if(ptinrect(m.xy, viewr)){
 			n = (m.xy.y-viewr.min.y)/lineh;
+			if(offset+n>=ndirs)
+				return;
 			d = dirs[offset+n];
 			if(d.qid.type && QTDIR){
 				cd(d.name);
