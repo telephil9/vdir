@@ -5,7 +5,7 @@
 #include <keyboard.h>
 #include <plumb.h>
 #include <bio.h>
-
+#include "icons.h"
 enum
 {
 	Toolpadding = 4,
@@ -22,11 +22,18 @@ Rectangle toolr;
 Rectangle homer;
 Rectangle upr;
 Rectangle cdr;
+Rectangle newdirr;
+Rectangle newfiler;
 Rectangle viewr;
 Rectangle scrollr;
 Rectangle scrposr;
 Image *folder;
 Image *file;
+Image *ihome;
+Image *icd;
+Image *iup;
+Image *inewfile;
+Image *inewfolder;
 Image *toolbg;
 Image *toolfg;
 Image *viewbg;
@@ -63,6 +70,8 @@ loaddirs(void)
 {
 	int fd;
 
+	if(dirs!=nil)
+		free(dirs);
 	fd = open(path, OREAD);
 	if(fd<0)
 		sysfatal("open: %r");
@@ -108,6 +117,42 @@ cd(char *dir)
 }
 
 void
+mkdir(char *name)
+{
+	char *p;
+	int fd;
+
+	p = smprint("%s/%s", path, name);
+	if(access(p, 0)>=0)
+		goto cleanup;
+	fd = create(p, OREAD, DMDIR|0755);
+	if(fd<0)
+		goto cleanup; /* XXX error report */
+	close(fd);
+	loaddirs();
+cleanup:
+	free(p);
+}
+
+void
+touch(char *name)
+{
+	char *p;
+	int fd;
+
+	p = smprint("%s/%s", path, name);
+	if(access(p, 0)>=0)
+		goto cleanup;
+	fd = create(p, OREAD, 0644);
+	if(fd<0)
+		goto cleanup; /* XXX error report */
+	close(fd);
+	loaddirs();
+cleanup:
+	free(p);
+}
+
+void
 plumbfile(char *path, char *name)
 {
 	int fd;
@@ -133,22 +178,34 @@ initcolors(void)
 	scrollfg = display->white;
 }
 
+Image*
+loadicon(Rectangle r, uchar *data, int ndata)
+{
+	Image *i;
+	int n;
+
+	i = allocimage(display, r, RGBA32, 0, DNofill);
+	if(i==nil)
+		sysfatal("allocimage: %r");
+	n = loadimage(i, r, data, ndata);
+	if(n<0)
+		sysfatal("loadimage: %r");
+	return i;
+}
+
 void
 initimages(void)
 {
-	Point folderpts[] = { 
-		Pt(0, 1), Pt(5,1), Pt(7, 4), Pt(10, 4), 
-		Pt(10, 10), Pt(0, 10), Pt(0, 1)
-	};
-	Point filepts[] = {
-		Pt(1, 1), Pt(7, 1), Pt(7, 4), Pt(10, 4),
-		Pt(10, 11), Pt(1, 11), Pt(1, 1)
-	};
-	folder = allocimage(display, Rect(0, 0, 12, 12), screen->chan, 0, DWhite);
-	poly(folder, folderpts, 7, 0, 0, 0, display->black, ZP);
-	file = allocimage(display, Rect(0, 0, 12, 12), screen->chan, 0, DWhite);
-	poly(file, filepts, 7, 0, 0, 0, display->black, ZP);	
-	line(file, Pt( 7,  1), Pt(10,  4), 0, 0, 0, display->black, ZP);
+	Rectangle small = Rect(0, 0, 12, 12);
+	Rectangle big   = Rect(0, 0, 16, 16);
+
+	folder = loadicon(small, folderdata, sizeof folderdata);
+	file   = loadicon(small, filedata, sizeof filedata);
+	ihome  = loadicon(big, homedata, sizeof homedata);
+	icd    = loadicon(big, cddata, sizeof cddata);
+	iup    = loadicon(big, updata, sizeof updata);
+	inewfile = loadicon(big, newfiledata, sizeof newfiledata);
+	inewfolder = loadicon(big, newfolderdata, sizeof newfolderdata);
 }
 
 char*
@@ -163,18 +220,34 @@ mdate(Dir d)
 }
 
 Rectangle
-drawbutton(Point *p, char *s)
+drawbutton(Point *p, Image *i)
 {
 	Rectangle r;
-	int w;
 
-	string(screen, *p, toolfg, ZP, font, s);
-	w = stringwidth(font, s);
-	r = Rect(p->x, p->y, p->x+w, p->y+lineh);
-	p->x += w+Toolpadding;
-	line(screen, Pt(p->x, toolr.min.y), Pt(p->x, toolr.max.y-1), 0, 0, 0, scrollbg, ZP);
 	p->x += Toolpadding;
+	r = Rect(p->x, p->y, p->x+16, p->y+16);
+	draw(screen, r, i, nil, ZP);
+	p->x += 16+Toolpadding;
 	return r;
+}
+
+void
+drawdir(Point p, Dir d)
+{
+	char buf[255], *t;
+	Image *img;
+
+	t = mdate(d);
+	snprint(buf, sizeof buf, "%12lld  %s", d.length, t);
+	free(t);
+	img = (d.qid.type&QTDIR) ? folder : file;
+	p.y -= Padding;
+	draw(screen, Rect(p.x, p.y+Padding, p.x+12, p.y+Padding+12), img, nil, ZP);
+	p.x += 12+4+Padding;
+	p.y += Padding;
+	string(screen, p, viewfg, ZP, font, d.name);
+	p.x = viewr.max.x - stringwidth(font, buf) - 3*Padding - Toolpadding;
+	string(screen, p, viewfg, ZP, font, buf);
 }
 
 void
@@ -182,18 +255,21 @@ redraw(void)
 {
 	Point p;
 	int i, h, y;
-	char buf[255], *t;
-	Dir d;
-	Image *img;
 
 	draw(screen, screen->r, display->white, nil, ZP);
-	p = addpt(screen->r.min, Pt(Toolpadding, Toolpadding));
+	p = addpt(screen->r.min, Pt(0, Toolpadding));
 	draw(screen, toolr, toolbg, nil, ZP);
 	line(screen, Pt(toolr.min.x, toolr.max.y), toolr.max, 0, 0, 0, toolfg, ZP);
-	homer = drawbutton(&p, "Home");
-	cdr = drawbutton(&p, "Cd");
-	upr = drawbutton(&p, "Up");
+	homer = drawbutton(&p, ihome);
+	cdr = drawbutton(&p, icd);
+	upr = drawbutton(&p, iup);
+	p.x += Toolpadding;
+	p.y = toolr.min.y + (Toolpadding+16+Toolpadding-font->height)/2;
 	string(screen, p, toolfg, ZP, font, path);
+	p.x = screen->r.max.x - 2*(Toolpadding+16+Toolpadding);
+	p.y = screen->r.min.y + Toolpadding;
+	newdirr = drawbutton(&p, inewfolder);
+	newfiler = drawbutton(&p, inewfile);
 	draw(screen, scrollr, scrollbg, nil, ZP);
 	if(ndirs>0){
 		h = ((double)nlines/ndirs)*Dy(scrollr);
@@ -204,16 +280,7 @@ redraw(void)
 	draw(screen, scrposr, display->white, nil, ZP);
 	p = addpt(viewr.min, Pt(Toolpadding, Toolpadding));
 	for(i = 0; i<nlines && offset+i<ndirs; i++){
-		d = dirs[offset+i];
-		t = mdate(d);
-		snprint(buf, sizeof buf, "%-32s %12lld  %s", d.name, d.length, t);
-		free(t);
-		img = (d.qid.type&QTDIR) ? folder : file;
-		p.y -= Padding;
-		draw(screen, Rect(p.x, p.y+Padding, p.x+12, p.y+Padding+12), img, nil, ZP);
-		p.x += 12+4+Padding;
-		p.y += Padding;
-		string(screen, p, viewfg, ZP, font, buf);
+		drawdir(p, dirs[offset+i]);
 		p.x = viewr.min.x+Toolpadding;
 		p.y += lineh;
 	}
@@ -246,7 +313,7 @@ eresized(int new)
 		sysfatal("cannot reattach: %r");
 	lineh = Padding+font->height+Padding;
 	toolr = screen->r;
-	toolr.max.y = toolr.min.y+lineh+Toolpadding;
+	toolr.max.y = toolr.min.y+16+2*Toolpadding;
 	scrollr = screen->r;
 	scrollr.min.y = toolr.max.y+1;
 	scrollr.max.x = scrollr.min.x + Scrollwidth;
@@ -300,6 +367,16 @@ evtmouse(Mouse m)
 		}else if(ptinrect(m.xy, cdr)){
 			if(eenter("Directory", buf, sizeof buf, &m)>0){
 				cd(buf);
+				redraw();
+			}
+		}else if(ptinrect(m.xy, newdirr)){
+			if(eenter("Create directory", buf, sizeof buf, &m)>0){
+				mkdir(buf);
+				redraw();
+			}
+		}else if(ptinrect(m.xy, newfiler)){
+			if(eenter("Create file", buf, sizeof buf, &m)>0){
+				touch(buf);
 				redraw();
 			}
 		}else if(ptinrect(m.xy, viewr)){
