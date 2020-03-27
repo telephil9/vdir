@@ -1,12 +1,15 @@
 vdir
 =====
 A minimalistic visual directory browser for Plan9.
+
 ![vdir](vdir.png)
 
 Actions are performed using the right mouse button:
 - Home: go to current user's home directory
-- Up: go to the parent directory
-- Cd: present an entry to jump to a given directory
+- Open: present an entry to jump to a given directory
+- Up  : go to the parent directory
+- New dir : present an entry to create a new directory
+- New file: present an entry to create a new empty file
 
 Right-clicking on folders, opens them.
 Right-clicking on files send them to the plumber.
@@ -24,5 +27,5 @@ Run ``vdir [directory]``
 
 Disclaimer:
 -----------
-This was a quick and dirty hack that sure contains some bugs.
+This was a quick and dirty hack that sure contains some bugs.  
 Enjoy anyway :)
