@@ -81,11 +81,13 @@ loaddirs(void)
 {
 	int fd;
 
+	fd = open(path, OREAD);
+	if(fd<0){
+		showerrstr();
+		return;
+	}
 	if(dirs!=nil)
 		free(dirs);
-	fd = open(path, OREAD);
-	if(fd<0)
-		sysfatal("open: %r");
 	ndirs = dirreadall(fd, &dirs);
 	qsort(dirs, ndirs, sizeof *dirs, (int(*)(void*,void*))dircmp);
 	offset = 0;
@@ -114,16 +116,23 @@ up(void)
 void
 cd(char *dir)
 {
+	char newpath[256];
 	char *sep;
+	int n;
 
 	if(dir == nil)
-		sprint(path, home);
+		n = snprint(newpath, sizeof path, home);
 	else if(dir[0] == '/')
-		snprint(path, sizeof path, dir);
+		n = snprint(newpath, sizeof newpath, dir);
 	else{
 		sep = strlen(path)==1 ? "" : "/";
-		snprint(path, sizeof path, "%s%s%s", path, sep, dir);
+		n = snprint(newpath, sizeof newpath, "%s%s%s", path, sep, dir);
 	}
+	if(access(newpath, 0)<0){
+		alert("Error", "Directory does not exist");
+		return;
+	}
+	strncpy(path, newpath, n);
 	loaddirs();
 }
 
@@ -384,7 +393,7 @@ evtmouse(Mouse m)
 			up();
 			redraw();
 		}else if(ptinrect(m.xy, cdr)){
-			if(eenter("Directory", buf, sizeof buf, &m)>0){
+			if(eenter("Go to directory", buf, sizeof buf, &m)>0){
 				cd(buf);
 				redraw();
 			}
