@@ -6,6 +6,9 @@
 #include <plumb.h>
 #include <bio.h>
 #include "icons.h"
+
+extern void alert(const char *title, const char *message);
+
 enum
 {
 	Toolpadding = 4,
@@ -44,6 +47,14 @@ int lineh;
 int nlines;
 int offset;
 
+void
+showerrstr(void)
+{
+	char errbuf[ERRMAX];
+
+	errstr(errbuf, ERRMAX-1);
+	alert("Error", errbuf);
+}
 
 void
 readhome(void)
@@ -123,11 +134,15 @@ mkdir(char *name)
 	int fd;
 
 	p = smprint("%s/%s", path, name);
-	if(access(p, 0)>=0)
+	if(access(p, 0)>=0){
+		alert("Error", "Directory already exists");
 		goto cleanup;
+	}
 	fd = create(p, OREAD, DMDIR|0755);
-	if(fd<0)
-		goto cleanup; /* XXX error report */
+	if(fd<0){
+		showerrstr();
+		goto cleanup;
+	}
 	close(fd);
 	loaddirs();
 cleanup:
@@ -141,11 +156,15 @@ touch(char *name)
 	int fd;
 
 	p = smprint("%s/%s", path, name);
-	if(access(p, 0)>=0)
+	if(access(p, 0)>=0){
+		alert("Error", "File already exists");
 		goto cleanup;
+	}
 	fd = create(p, OREAD, 0644);
-	if(fd<0)
-		goto cleanup; /* XXX error report */
+	if(fd<0){
+		showerrstr();
+		goto cleanup;
+	}
 	close(fd);
 	loaddirs();
 cleanup:
