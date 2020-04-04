@@ -378,6 +378,17 @@ evtkey(Rune k)
 	}
 }
 
+Point
+cept(const char *text)
+{
+	Point p;
+
+	p = screen->r.min;
+	p.x += (Dx(screen->r)-stringwidth(font, text)-4)/2;
+	p.y += (Dy(screen->r)-font->height-4)/2;
+	return p;
+}
+
 void
 evtmouse(Mouse m)
 {
@@ -393,16 +404,19 @@ evtmouse(Mouse m)
 			up();
 			redraw();
 		}else if(ptinrect(m.xy, cdr)){
+			m.xy = cept("Go to directory");
 			if(eenter("Go to directory", buf, sizeof buf, &m)>0){
 				cd(buf);
 				redraw();
 			}
 		}else if(ptinrect(m.xy, newdirr)){
+			m.xy = cept("Create directory");
 			if(eenter("Create directory", buf, sizeof buf, &m)>0){
 				mkdir(buf);
 				redraw();
 			}
 		}else if(ptinrect(m.xy, newfiler)){
+			m.xy = cept("Create file");
 			if(eenter("Create file", buf, sizeof buf, &m)>0){
 				touch(buf);
 				redraw();
