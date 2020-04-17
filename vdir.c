@@ -116,7 +116,7 @@ up(void)
 void
 cd(char *dir)
 {
-	char newpath[256];
+	char newpath[256] = {0};
 	char *sep;
 	int n;
 
@@ -133,6 +133,7 @@ cd(char *dir)
 		return;
 	}
 	strncpy(path, newpath, n);
+	path[n] = 0;
 	loaddirs();
 }
 
