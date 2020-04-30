@@ -66,6 +66,20 @@ readhome(void)
 	Bterm(bp);
 }
 
+char*
+abspath(char *wd, char *p)
+{
+	char *s;
+
+	if(p[0]=='/')
+		s = cleanname(p);
+	else{
+		s = smprint("%s/%s", wd, p);
+		cleanname(s);
+	}
+	return s;
+}
+
 int
 dircmp(Dir *a, Dir *b)
 {
@@ -97,19 +111,7 @@ loaddirs(void)
 void
 up(void)
 {
-	int i, n;
-
-	n = strlen(path);
-	if(n==1)
-		return;
-	for(i = n-1; path[i]; i--){
-		if(path[i]=='/'){
-			path[i]=0;
-			break;
-		}
-	}
-	if(strlen(path)==0)
-		sprint(path, "/");
+	snprint(path, sizeof path, abspath(path, ".."));
 	loaddirs();
 }
 
@@ -117,23 +119,18 @@ void
 cd(char *dir)
 {
 	char newpath[256] = {0};
-	char *sep;
-	int n;
 
 	if(dir == nil)
-		n = snprint(newpath, sizeof path, home);
+		snprint(newpath, sizeof path, home);
 	else if(dir[0] == '/')
-		n = snprint(newpath, sizeof newpath, dir);
-	else{
-		sep = strlen(path)==1 ? "" : "/";
-		n = snprint(newpath, sizeof newpath, "%s%s%s", path, sep, dir);
-	}
+		snprint(newpath, sizeof newpath, dir);
+	else
+		snprint(newpath, sizeof newpath, "%s/%s", path, dir);
 	if(access(newpath, 0)<0){
 		alert("Error", "Directory does not exist");
 		return;
 	}
-	strncpy(path, newpath, n);
-	path[n] = 0;
+	snprint(path, sizeof path, abspath(path, newpath));
 	loaddirs();
 }
 
@@ -439,17 +436,15 @@ evtmouse(Mouse m)
 		scrolldown(Slowscroll);
 }
 
-
 void
 main(int argc, char *argv[])
 {
 	Event e;
 
 	offset = 0;
+	getwd(path, sizeof path);	
 	if(argc==2)
-		snprint(path, sizeof path, argv[1]);
-	else
-		getwd(path, sizeof path);
+		snprint(path, sizeof path, abspath(path, argv[1]));
 	readhome();
 	loaddirs();
 	if(initdraw(nil, nil, "vdir")<0)
