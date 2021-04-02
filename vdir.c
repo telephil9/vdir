@@ -420,7 +420,7 @@ evtmouse(Mouse m)
 			if(offset+n>=ndirs)
 				return;
 			d = dirs[offset+n];
-			if(d.qid.type && QTDIR){
+			if(d.qid.type & QTDIR){
 				cd(d.name);
 				redraw();
 			}else
