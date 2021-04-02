@@ -46,6 +46,7 @@ Image *scrollfg;
 int lineh;
 int nlines;
 int offset;
+int plumbfd;
 
 void
 showerrstr(void)
@@ -181,15 +182,10 @@ cleanup:
 void
 plumbfile(char *path, char *name)
 {
-	int fd;
 	char *f;
 
 	f = smprint("%s/%s", path, name);
-	fd = plumbopen("send", OWRITE|OCEXEC);
-	if(fd<0)
-		return;
-	plumbsendtext(fd, "vdir", nil, nil, f);
-	close(fd);
+	plumbsendtext(plumbfd, "vdir", nil, nil, f);
 	free(f);
 }	
 
@@ -445,6 +441,9 @@ main(int argc, char *argv[])
 	getwd(path, sizeof path);	
 	if(argc==2)
 		snprint(path, sizeof path, abspath(path, argv[1]));
+	plumbfd = plumbopen("send", OWRITE|OCEXEC);
+	if(plumbfd<0)
+		sysfatal("plumbopen: %r");
 	readhome();
 	loaddirs();
 	if(initdraw(nil, nil, "vdir")<0)
