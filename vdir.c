@@ -386,11 +386,23 @@ cept(const char *text)
 void
 evtmouse(Mouse m)
 {
-	int n;
+	int n, dy;
 	Dir d;
 	char buf[256] = {0};
 
-	if(m.buttons&4){
+	if(m.buttons&1){
+		if(ptinrect(m.xy, scrollr)){
+			dy = 1+nlines*((double)(m.xy.y - scrollr.min.y)/Dy(scrollr));
+			scrollup(dy);
+		}
+	}else if(m.buttons&2){
+		if(ptinrect(m.xy, scrollr)){
+			if(nlines<ndirs){
+				offset = (m.xy.y - scrollr.min.y) * ndirs/Dy(scrollr);
+				redraw();
+			}
+		}
+	}if(m.buttons&4){
 		if(ptinrect(m.xy, homer)){
 			cd(nil);
 			redraw();
@@ -425,6 +437,9 @@ evtmouse(Mouse m)
 				redraw();
 			}else
 				plumbfile(path, d.name);
+		}else if(ptinrect(m.xy, scrollr)){
+			dy = 1+nlines*((double)(m.xy.y - scrollr.min.y)/Dy(scrollr));
+			scrolldown(dy);
 		}
 	}else if(m.buttons&8)
 		scrollup(Slowscroll);
