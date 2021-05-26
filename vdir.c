@@ -47,6 +47,8 @@ int lineh;
 int nlines;
 int offset;
 int plumbfd;
+int scrolling;
+int oldbuttons;
 
 void
 showerrstr(void)
@@ -308,23 +310,27 @@ redraw(void)
 	}
 }
 
+int
+scrollclamp(int offset)
+{
+	if(offset < 0)
+		offset = 0;
+	if(offset+nlines > ndirs)
+		offset = ndirs-nlines;
+	return offset;
+}
+
 void
 scrollup(int off)
 {
-	if(offset == 0)
-		return;
-	offset -= off;
-	if(offset < 0)
-		offset = 0;
+	offset = scrollclamp(offset - off);
 	redraw();
 }
 
 void
 scrolldown(int off)
 {
-	if(offset+nlines > ndirs)
-		return;
-	offset += off;
+	offset = scrollclamp(offset + off);
 	redraw();
 }
 
@@ -390,20 +396,28 @@ evtmouse(Mouse m)
 	Dir d;
 	char buf[256] = {0};
 
+	if(oldbuttons == 0 && m.buttons != 0 && ptinrect(m.xy, scrollr))
+		scrolling = 1;
+	else if(m.buttons == 0)
+		scrolling = 0;
+
 	if(m.buttons&1){
-		if(ptinrect(m.xy, scrollr)){
+		if(scrolling){
 			dy = 1+nlines*((double)(m.xy.y - scrollr.min.y)/Dy(scrollr));
 			scrollup(dy);
 		}
 	}else if(m.buttons&2){
-		if(ptinrect(m.xy, scrollr)){
+		if(scrolling){
 			if(nlines<ndirs){
-				offset = (m.xy.y - scrollr.min.y) * ndirs/Dy(scrollr);
+				offset = scrollclamp((m.xy.y - scrollr.min.y) * ndirs/Dy(scrollr));
 				redraw();
 			}
 		}
-	}if(m.buttons&4){
-		if(ptinrect(m.xy, homer)){
+	}if((m.buttons&4) && oldbuttons == 0){
+		if(scrolling){
+			dy = 1+nlines*((double)(m.xy.y - scrollr.min.y)/Dy(scrollr));
+			scrolldown(dy);
+		}else if(ptinrect(m.xy, homer)){
 			cd(nil);
 			redraw();
 		}else if(ptinrect(m.xy, upr)){
@@ -437,14 +451,13 @@ evtmouse(Mouse m)
 				redraw();
 			}else
 				plumbfile(path, d.name);
-		}else if(ptinrect(m.xy, scrollr)){
-			dy = 1+nlines*((double)(m.xy.y - scrollr.min.y)/Dy(scrollr));
-			scrolldown(dy);
 		}
 	}else if(m.buttons&8)
 		scrollup(Slowscroll);
 	else if(m.buttons&16)
 		scrolldown(Slowscroll);
+
+	oldbuttons = m.buttons;
 }
 
 void
@@ -453,6 +466,8 @@ main(int argc, char *argv[])
 	Event e;
 
 	offset = 0;
+	scrolling = 0;
+	oldbuttons = 0;
 	getwd(path, sizeof path);	
 	if(argc==2)
 		snprint(path, sizeof path, abspath(path, argv[1]));
