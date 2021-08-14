@@ -30,6 +30,7 @@ Rectangle newfiler;
 Rectangle viewr;
 Rectangle scrollr;
 Rectangle scrposr;
+Rectangle pathr;
 Image *folder;
 Image *file;
 Image *ihome;
@@ -189,7 +190,7 @@ plumbfile(char *path, char *name)
 	f = smprint("%s/%s", path, name);
 	plumbsendtext(plumbfd, "vdir", nil, nil, f);
 	free(f);
-}	
+}
 
 void
 initcolors(void)
@@ -289,6 +290,7 @@ redraw(void)
 	upr = drawbutton(&p, iup);
 	p.x += Toolpadding;
 	p.y = toolr.min.y + (Toolpadding+16+Toolpadding-font->height)/2;
+	pathr = Rect(p.x, p.y, p.x + stringwidth(font, path), p.y + font->height);
 	string(screen, p, toolfg, ZP, font, path);
 	p.x = screen->r.max.x - 2*(Toolpadding+16+Toolpadding);
 	p.y = screen->r.min.y + Toolpadding;
@@ -375,6 +377,9 @@ evtkey(Rune k)
 		up();
 		redraw();
 		break;
+	case 0x20:
+		plumbsendtext(plumbfd, "vdir", nil, nil, path);
+		break;
 	}
 }
 
@@ -429,6 +434,8 @@ evtmouse(Mouse m)
 				cd(buf);
 				redraw();
 			}
+		}else if(ptinrect(m.xy, pathr)){
+			plumbsendtext(plumbfd, "vdir", nil, nil, path);
 		}else if(ptinrect(m.xy, newdirr)){
 			m.xy = cept("Create directory");
 			if(eenter("Create directory", buf, sizeof buf, &m)>0){

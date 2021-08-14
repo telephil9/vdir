@@ -11,6 +11,7 @@ Actions are performed using the right mouse button:
 - New dir : present an entry to create a new directory
 - New file: present an entry to create a new empty file
 
+Right-clicking on the path, plumbs the path name
 Right-clicking on folders, opens them.
 Right-clicking on files send them to the plumber.
 
@@ -18,6 +19,7 @@ Keyboard shortcuts are:
 - Page up / Page down to scroll
 - Home to go to $home
 - Up arrow to go to parent directory
+- Space to plumb current directory path
 - q / Del to quit
 
 Usage:
