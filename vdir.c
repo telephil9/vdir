@@ -315,9 +315,11 @@ redraw(void)
 int
 scrollclamp(int offset)
 {
-	if(offset < 0)
+	if(nlines >= ndirs)
 		offset = 0;
-	if(offset+nlines > ndirs)
+	else if(offset < 0)
+		offset = 0;
+	else if(offset+nlines > ndirs)
 		offset = ndirs-nlines;
 	return offset;
 }
@@ -325,14 +327,24 @@ scrollclamp(int offset)
 void
 scrollup(int off)
 {
-	offset = scrollclamp(offset - off);
+	int newoff;
+
+	newoff = scrollclamp(offset - off);
+	if(newoff == offset)
+		return;
+	offset = newoff;
 	redraw();
 }
 
 void
 scrolldown(int off)
 {
-	offset = scrollclamp(offset + off);
+	int newoff;
+
+	newoff = scrollclamp(offset + off);
+	if(newoff == offset)
+		return;
+	offset = newoff;
 	redraw();
 }
 
