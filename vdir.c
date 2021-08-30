@@ -1,13 +1,14 @@
 #include <u.h>
 #include <libc.h>
 #include <draw.h>
-#include <event.h>
+#include <thread.h>
+#include <mouse.h>
 #include <keyboard.h>
 #include <plumb.h>
 #include <bio.h>
 #include "icons.h"
 
-extern void alert(const char *title, const char *message);
+extern void alert(const char *title, const char *message, Mousectl *mctl, Keyboardctl *kctl);
 
 enum
 {
@@ -17,10 +18,19 @@ enum
 	Slowscroll = 10,
 };
 
+enum
+{
+	Emouse,
+	Eresize,
+	Ekeyboard,
+};
+
 char *home;
 char path[256];
 Dir* dirs;
 long ndirs;
+Mousectl *mctl;
+Keyboardctl *kctl;
 Rectangle toolr;
 Rectangle homer;
 Rectangle upr;
@@ -57,7 +67,7 @@ showerrstr(void)
 	char errbuf[ERRMAX];
 
 	errstr(errbuf, ERRMAX-1);
-	alert("Error", errbuf);
+	alert("Error", errbuf, mctl, kctl);
 }
 
 void
@@ -131,7 +141,7 @@ cd(char *dir)
 	else
 		snprint(newpath, sizeof newpath, "%s/%s", path, dir);
 	if(access(newpath, 0)<0){
-		alert("Error", "Directory does not exist");
+		alert("Error", "Directory does not exist", mctl, kctl);
 		return;
 	}
 	snprint(path, sizeof path, abspath(path, newpath));
@@ -146,7 +156,7 @@ mkdir(char *name)
 
 	p = smprint("%s/%s", path, name);
 	if(access(p, 0)>=0){
-		alert("Error", "Directory already exists");
+		alert("Error", "Directory already exists", mctl, kctl);
 		goto cleanup;
 	}
 	fd = create(p, OREAD, DMDIR|0755);
@@ -168,7 +178,7 @@ touch(char *name)
 
 	p = smprint("%s/%s", path, name);
 	if(access(p, 0)>=0){
-		alert("Error", "File already exists");
+		alert("Error", "File already exists", mctl, kctl);
 		goto cleanup;
 	}
 	fd = create(p, OREAD, 0644);
@@ -281,6 +291,7 @@ redraw(void)
 	Point p;
 	int i, h, y;
 
+	lockdisplay(display);
 	draw(screen, screen->r, display->white, nil, ZP);
 	p = addpt(screen->r.min, Pt(0, Toolpadding));
 	draw(screen, toolr, toolbg, nil, ZP);
@@ -310,6 +321,8 @@ redraw(void)
 		p.x = viewr.min.x+Toolpadding;
 		p.y += lineh;
 	}
+	flushimage(display, 1);
+	unlockdisplay(display);
 }
 
 int
@@ -349,9 +362,9 @@ scrolldown(int off)
 }
 
 void
-eresized(int new)
+evtresize(void)
 {
-	if(new && getwindow(display, Refnone)<0)
+	if(getwindow(display, Refnone)<0)
 		sysfatal("cannot reattach: %r");
 	lineh = Padding+font->height+Padding;
 	toolr = screen->r;
@@ -373,7 +386,7 @@ evtkey(Rune k)
 	switch(k){
 	case 'q':
 	case Kdel:
-		exits(nil);
+		threadexitsall(nil);
 		break;
 	case Kpgup:
 		scrollup(nlines);
@@ -442,7 +455,7 @@ evtmouse(Mouse m)
 			redraw();
 		}else if(ptinrect(m.xy, cdr)){
 			m.xy = cept("Go to directory");
-			if(eenter("Go to directory", buf, sizeof buf, &m)>0){
+			if(enter("Go to directory", buf, sizeof buf, mctl, kctl, nil)>0){
 				cd(buf);
 				redraw();
 			}
@@ -450,13 +463,13 @@ evtmouse(Mouse m)
 			plumbsendtext(plumbfd, "vdir", nil, nil, path);
 		}else if(ptinrect(m.xy, newdirr)){
 			m.xy = cept("Create directory");
-			if(eenter("Create directory", buf, sizeof buf, &m)>0){
+			if(enter("Create directory", buf, sizeof buf, mctl, kctl, nil)>0){
 				mkdir(buf);
 				redraw();
 			}
 		}else if(ptinrect(m.xy, newfiler)){
 			m.xy = cept("Create file");
-			if(eenter("Create file", buf, sizeof buf, &m)>0){
+			if(enter("Create file", buf, sizeof buf, mctl, kctl, nil)>0){
 				touch(buf);
 				redraw();
 			}
@@ -480,9 +493,16 @@ evtmouse(Mouse m)
 }
 
 void
-main(int argc, char *argv[])
+threadmain(int argc, char *argv[])
 {
-	Event e;
+	Mouse m;
+	Rune k;
+	Alt alts[] = {
+		{ nil, &m,  CHANRCV },
+		{ nil, nil, CHANRCV },	
+		{ nil, &k,  CHANRCV },
+		{ nil, nil, CHANEND },
+	};
 
 	offset = 0;
 	scrolling = 0;
@@ -497,17 +517,30 @@ main(int argc, char *argv[])
 	loaddirs();
 	if(initdraw(nil, nil, "vdir")<0)
 		sysfatal("initdraw: %r");
+	unlockdisplay(display);
+	display->locking = 1;
+	mctl = initmouse(nil, screen);
+	if(mctl==nil)
+		sysfatal("initmouse: %r");
+	kctl = initkeyboard(nil);
+	if(kctl==nil)
+		sysfatal("initkeyboard: %r");
+	alts[Emouse].c = mctl->c;
+	alts[Eresize].c = mctl->resizec;
+	alts[Ekeyboard].c = kctl->c;
 	initcolors();
 	initimages();
-	einit(Emouse|Ekeyboard);
-	eresized(0);
+	evtresize();
 	for(;;){
-		switch(event(&e)){
-		case Ekeyboard:
-			evtkey(e.kbdc);
-			break;
+		switch(alt(alts)){
 		case Emouse:
-			evtmouse(e.mouse);
+			evtmouse(m);
+			break;
+		case Eresize:
+			evtresize();
+			break;
+		case Ekeyboard:
+			evtkey(k);
 			break;
 		}
 	}

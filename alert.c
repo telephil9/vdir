@@ -1,7 +1,8 @@
 #include <u.h>
 #include <libc.h>
 #include <draw.h>
-#include <event.h>
+#include <thread.h>
+#include <mouse.h>
 #include <keyboard.h>
 
 enum { Padding = 12, };
@@ -15,17 +16,28 @@ max(int a, int b)
 }
 
 void
-alert(const char *title, const char *message)
+alert(const char *title, const char *message, Mousectl *mctl, Keyboardctl *kctl)
 {
+	Alt alts[3];
 	Rectangle r, sc;
 	Point o, p;
 	Image *b, *save, *bg, *fg;
 	Font *tf, *mf;
-	int done, i, h, w, tw, mw;
-	Event ev;
+	int done, h, w, tw, mw;
 	Mouse m;
 	Rune k;
 
+	alts[0].op = CHANRCV;
+	alts[0].c  = mctl->c;
+	alts[0].v  = &m;
+	alts[1].op = CHANRCV;
+	alts[1].c  = kctl->c;
+	alts[1].v  = &k;
+	alts[2].op = CHANEND;
+	alts[2].c  = nil;
+	alts[2].v  = nil;
+	while(nbrecv(kctl->c, nil)==1)
+		;
 	bg = allocimage(display, Rect(0,0,1,1), screen->chan, 1, 0xf8d7daff);
 	fg = allocimage(display, Rect(0,0,1,1), screen->chan, 1, 0x721c24ff);
 	tf = openfont(display, Titlefont);
@@ -59,8 +71,6 @@ alert(const char *title, const char *message)
 		p.y += tf->height;
 		string(b, p, fg, ZP, mf, message);
 		flushimage(display, 1);
-		i = Ekeyboard|Emouse;
-		i = eread(i, &ev);
 		if(b!=screen || !eqrect(screen->clipr, sc)){
 			freeimage(save);
 			save = nil;
@@ -68,16 +78,14 @@ alert(const char *title, const char *message)
 		b = screen;
 		sc = b->clipr;
 		replclipr(b, 0, b->r);
-		switch(i){
+		switch(alt(alts)){
 		default:
 			continue;
 			break;
-		case Ekeyboard:
-			k = ev.kbdc;
+		case 1:
 			done = (k=='\n' || k==Kesc);
 			break;
-		case Emouse:
-			m = ev.mouse;
+		case 0:
 			done = m.buttons&1 && ptinrect(m.xy, r);
 			break;
 		}
