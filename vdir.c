@@ -295,6 +295,18 @@ drawdir(int n, int selected)
 }
 
 void
+flash(int n)
+{
+	int i;
+
+	for(i=0; i<5; i++){
+		drawdir(n, i&1);
+		sleep(50);
+		flushimage(display, 1);
+	}
+}
+
+void
 redraw(void)
 {
 	Point p;
@@ -493,9 +505,10 @@ evtmouse(Mouse m)
 				redraw();
 			}
 		}else if(ptinrect(m.xy, viewr)){
-			n = (m.xy.y-viewr.min.y)/lineh;
-			if(offset+n>=ndirs)
+			n = indexat(m.xy);
+			if(n==-1)
 				return;
+			flash(n);
 			d = dirs[offset+n];
 			if(d.qid.type & QTDIR){
 				cd(d.name);
