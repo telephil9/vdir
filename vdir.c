@@ -277,6 +277,8 @@ drawdir(int n, int selected)
 	Rectangle r;
 	int dy;
 
+	if(offset+n>=ndirs)
+		return;
 	d = dirs[offset+n];
 	p = addpt(viewr.min, Pt(Toolpadding, Toolpadding));
 	p.y += n*lineh;
