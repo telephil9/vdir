@@ -275,6 +275,7 @@ drawdir(int n, int selected)
 	Image *img;
 	Point p;
 	Rectangle r;
+	int dy;
 
 	d = dirs[offset+n];
 	p = addpt(viewr.min, Pt(Toolpadding, Toolpadding));
@@ -286,7 +287,8 @@ drawdir(int n, int selected)
 	free(t);
 	img = (d.qid.type&QTDIR) ? folder : file;
 	p.y -= Padding;
-	draw(screen, Rect(p.x, p.y+Padding, p.x+12, p.y+Padding+12), img, nil, ZP);
+	dy = (lineh-12)/2;
+	draw(screen, Rect(p.x, p.y+dy, p.x+12, p.y+dy+12), img, nil, ZP);
 	p.x += 12+4+Padding;
 	p.y += Padding;
 	string(screen, p, viewfg, ZP, font, d.name);
