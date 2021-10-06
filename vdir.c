@@ -60,6 +60,7 @@ int offset;
 int plumbfd;
 int scrolling;
 int oldbuttons;
+int lastn;
 
 void
 showerrstr(void)
@@ -267,11 +268,19 @@ drawbutton(Point *p, Image *i)
 }
 
 void
-drawdir(Point p, Dir d)
+drawdir(int n, int selected)
 {
 	char buf[255], *t;
+	Dir d;
 	Image *img;
+	Point p;
+	Rectangle r;
 
+	d = dirs[offset+n];
+	p = addpt(viewr.min, Pt(Toolpadding, Toolpadding));
+	p.y += n*lineh;
+	r = Rpt(p, addpt(p, Pt(Dx(viewr)-2*Toolpadding, lineh)));
+	draw(screen, r, selected?toolbg:viewbg, nil, ZP);
 	t = mdate(d);
 	snprint(buf, sizeof buf, "%12lld  %s", d.length, t);
 	free(t);
@@ -315,11 +324,8 @@ redraw(void)
 	}else
 		scrposr = Rect(scrollr.min.x, scrollr.min.y, scrollr.max.x-1, scrollr.max.y);
 	draw(screen, scrposr, display->white, nil, ZP);
-	p = addpt(viewr.min, Pt(Toolpadding, Toolpadding));
 	for(i = 0; i<nlines && offset+i<ndirs; i++){
-		drawdir(p, dirs[offset+i]);
-		p.x = viewr.min.x+Toolpadding;
-		p.y += lineh;
+		drawdir(i, 0);
 	}
 	flushimage(display, 1);
 	unlockdisplay(display);
@@ -419,6 +425,19 @@ cept(const char *text)
 	return p;
 }
 
+int
+indexat(Point p)
+{
+	int n;
+
+	if(!ptinrect(p, viewr))
+		return -1;
+	n = (p.y-viewr.min.y)/lineh;
+	if(offset+n>=ndirs)
+		return -1;
+	return n;
+}
+
 void
 evtmouse(Mouse m)
 {
@@ -488,6 +507,22 @@ evtmouse(Mouse m)
 		scrollup(Slowscroll);
 	else if(m.buttons&16)
 		scrolldown(Slowscroll);
+	else{
+		n = indexat(m.xy);
+		if(n==-1){
+			if(lastn!=-1){
+				drawdir(lastn, 0);
+				lastn = -1;
+				flushimage(display, 1);
+			}
+		}else if(n!=lastn){
+			if(lastn!=-1)
+				drawdir(lastn, 0);
+			drawdir(n, 1);
+			lastn = n;
+			flushimage(display, 1);
+		}
+	}
 
 	oldbuttons = m.buttons;
 }
@@ -507,6 +542,7 @@ threadmain(int argc, char *argv[])
 	offset = 0;
 	scrolling = 0;
 	oldbuttons = 0;
+	lastn = -1;
 	getwd(path, sizeof path);	
 	if(argc==2)
 		snprint(path, sizeof path, abspath(path, argv[1]));
@@ -518,7 +554,6 @@ threadmain(int argc, char *argv[])
 	if(initdraw(nil, nil, "vdir")<0)
 		sysfatal("initdraw: %r");
 	unlockdisplay(display);
-	display->locking = 1;
 	mctl = initmouse(nil, screen);
 	if(mctl==nil)
 		sysfatal("initmouse: %r");
