@@ -56,6 +56,7 @@ Image *viewbg;
 Image *viewfg;
 Image *scrollbg;
 Image *scrollfg;
+int sizew;
 int lineh;
 int nlines;
 int offset;
@@ -110,7 +111,7 @@ dircmp(Dir *a, Dir *b)
 void
 loaddirs(void)
 {
-	int fd;
+	int fd, i, m;
 
 	fd = open(path, OREAD);
 	if(fd<0){
@@ -123,6 +124,12 @@ loaddirs(void)
 	qsort(dirs, ndirs, sizeof *dirs, (int(*)(void*,void*))dircmp);
 	offset = 0;
 	close(fd);
+	m = 0;
+	for(i=0; i < ndirs; i++){
+		if(dirs[i].length>m)
+			m=dirs[i].length;
+	}
+	sizew = 1+1+log(m)/log(10);
 }
 
 void
@@ -307,7 +314,7 @@ drawdir(int n, int selected)
 	r = Rpt(p, addpt(p, Pt(Dx(viewr)-2*Toolpadding, lineh)));
 	draw(screen, r, selected?toolbg:viewbg, nil, ZP);
 	t = mdate(d);
-	snprint(buf, sizeof buf, "%12lld  %s", d.length, t);
+	snprint(buf, sizeof buf, "%*lld  %s", sizew, d.length, t);
 	free(t);
 	img = (d.qid.type&QTDIR) ? folder : file;
 	p.y -= Padding;
