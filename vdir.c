@@ -512,13 +512,14 @@ evtmouse(Mouse m)
 			n = indexat(m.xy);
 			if(n==-1)
 				return;
-			flash(n);
 			d = dirs[offset+n];
 			if(d.qid.type & QTDIR){
 				cd(d.name);
 				redraw();
-			}else
+			}else{
 				plumbfile(path, d.name);
+				flash(n);
+			}
 		}
 	}else if(m.buttons&8)
 		scrollup(Slowscroll);
