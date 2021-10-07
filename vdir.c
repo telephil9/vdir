@@ -25,6 +25,8 @@ enum
 	Ekeyboard,
 };
 
+const char ellipsis[] = "…";
+
 char *home;
 char path[256];
 Dir* dirs;
@@ -267,6 +269,26 @@ drawbutton(Point *p, Image *i)
 	return r;
 }
 
+Point
+drawtext(Point p, Image *i, char* t, int n)
+{
+	int d;
+	char *s;
+	Rune  rn;
+
+	d = stringwidth(font, " ")+stringwidth(font, ellipsis);
+	for(s = t; *s; s++){
+		if(p.x+d>=n){
+			string(screen, p, i, ZP, font, ellipsis);
+			break;
+		}else{
+			s += chartorune(&rn, s) - 1;
+			p = runestringn(screen, p, i, ZP, font, &rn, 1);
+		} 
+	}
+	return p;
+}
+
 void
 drawdir(int n, int selected)
 {
@@ -293,8 +315,8 @@ drawdir(int n, int selected)
 	draw(screen, Rect(p.x, p.y+dy, p.x+12, p.y+dy+12), img, nil, ZP);
 	p.x += 12+4+Padding;
 	p.y += Padding;
-	string(screen, p, viewfg, ZP, font, d.name);
-	p.x = viewr.max.x - stringwidth(font, buf) - 3*Padding - Toolpadding;
+	p = drawtext(p, viewfg, d.name, viewr.max.x - stringwidth(font, buf) - 2*Padding - Toolpadding);
+	p.x = viewr.max.x - stringwidth(font, buf) - 2*Padding - Toolpadding;
 	string(screen, p, viewfg, ZP, font, buf);
 }
 
@@ -327,7 +349,7 @@ redraw(void)
 	p.x += Toolpadding;
 	p.y = toolr.min.y + (Toolpadding+16+Toolpadding-font->height)/2;
 	pathr = Rect(p.x, p.y, p.x + stringwidth(font, path), p.y + font->height);
-	string(screen, p, toolfg, ZP, font, path);
+	p = drawtext(p, toolfg, path, screen->r.max.x - 2*(Toolpadding+16+Toolpadding));
 	p.x = screen->r.max.x - 2*(Toolpadding+16+Toolpadding);
 	p.y = screen->r.min.y + Toolpadding;
 	newdirr = drawbutton(&p, inewfolder);
