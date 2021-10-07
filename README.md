@@ -27,6 +27,17 @@ Usage:
 Install with the usual ``mk install``  
 Run ``vdir [directory]``
 
+Path plumbing:
+--------------
+When right-clicking the path, the path name is sent to plumber.
+This can be used to open a window in the directory for instance:
+```
+src is vdir
+type is text
+arg isdir $data
+plumb start window -cd $data rc
+```
+
 Disclaimer:
 -----------
 This was a quick and dirty hack that sure contains some bugs.  
