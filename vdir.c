@@ -124,7 +124,7 @@ loaddirs(void)
 	qsort(dirs, ndirs, sizeof *dirs, (int(*)(void*,void*))dircmp);
 	offset = 0;
 	close(fd);
-	m = 0;
+	m = 1;
 	for(i=0; i < ndirs; i++){
 		if(dirs[i].length>m)
 			m=dirs[i].length;
