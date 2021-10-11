@@ -343,7 +343,6 @@ redraw(void)
 	Point p;
 	int i, h, y;
 
-	lockdisplay(display);
 	draw(screen, screen->r, display->white, nil, ZP);
 	p = addpt(screen->r.min, Pt(0, Toolpadding));
 	draw(screen, toolr, toolbg, nil, ZP);
@@ -371,7 +370,6 @@ redraw(void)
 		drawdir(i, 0);
 	}
 	flushimage(display, 1);
-	unlockdisplay(display);
 }
 
 int
@@ -598,7 +596,7 @@ threadmain(int argc, char *argv[])
 	loaddirs();
 	if(initdraw(nil, nil, "vdir")<0)
 		sysfatal("initdraw: %r");
-	unlockdisplay(display);
+	display->locking = 0;
 	mctl = initmouse(nil, screen);
 	if(mctl==nil)
 		sysfatal("initmouse: %r");
