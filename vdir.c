@@ -9,6 +9,7 @@
 #include "icons.h"
 
 extern void alert(const char *title, const char *message, Mousectl *mctl, Keyboardctl *kctl);
+void redraw(void);
 
 enum
 {
@@ -150,11 +151,10 @@ cd(char *dir)
 		snprint(newpath, sizeof newpath, dir);
 	else
 		snprint(newpath, sizeof newpath, "%s/%s", path, dir);
-	if(access(newpath, 0)<0){
+	if(access(newpath, 0)<0)
 		alert("Error", "Directory does not exist", mctl, kctl);
-		return;
-	}
-	snprint(path, sizeof path, abspath(path, newpath));
+	else
+		snprint(path, sizeof path, abspath(path, newpath));
 	loaddirs();
 }
 
@@ -202,14 +202,23 @@ cleanup:
 	free(p);
 }
 
-void
+int
 plumbfile(char *path, char *name)
 {
 	char *f;
+	int e;
 
 	f = smprint("%s/%s", path, name);
-	plumbsendtext(plumbfd, "vdir", nil, nil, f);
+	e = access(f, 0)==0;
+	if(e)
+		plumbsendtext(plumbfd, "vdir", nil, nil, f);
+	else{
+		alert("Error", "File does not exist anymore", mctl, kctl);
+		loaddirs();
+		redraw();
+	}
 	free(f);
+	return e;
 }
 
 void
@@ -542,8 +551,8 @@ evtmouse(Mouse m)
 				cd(d.name);
 				redraw();
 			}else{
-				plumbfile(path, d.name);
-				flash(n);
+				if(plumbfile(path, d.name))
+					flash(n);
 			}
 		}
 	}else if(m.buttons&8)
