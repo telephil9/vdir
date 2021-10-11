@@ -279,19 +279,17 @@ drawbutton(Point *p, Image *i)
 Point
 drawtext(Point p, Image *i, char* t, int n)
 {
-	int d;
 	char *s;
 	Rune  rn;
 
-	d = stringwidth(font, " ")+stringwidth(font, ellipsis);
-	for(s = t; *s; s++){
-		if(p.x+d>=n){
-			string(screen, p, i, ZP, font, ellipsis);
-			break;
-		}else{
-			s += chartorune(&rn, s) - 1;
-			p = runestringn(screen, p, i, ZP, font, &rn, 1);
-		} 
+	s = t;
+	if(*s && (p.x+stringwidth(font, s)) > n){
+		p = string(screen, p, i, ZP, font, ellipsis);
+		while (*s && (p.x+stringwidth(font, s)) > n) s++;
+	}
+	for( ; *s; s++){
+		s += chartorune(&rn, s) - 1;
+		p = runestringn(screen, p, i, ZP, font, &rn, 1);
 	}
 	return p;
 }
