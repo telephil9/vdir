@@ -211,7 +211,7 @@ plumbfile(char *path, char *name)
 	f = smprint("%s/%s", path, name);
 	e = access(f, 0)==0;
 	if(e)
-		plumbsendtext(plumbfd, "vdir", nil, nil, f);
+		plumbsendtext(plumbfd, "vdir", nil, path, name);
 	else{
 		alert("Error", "File does not exist anymore", mctl, kctl);
 		loaddirs();
