@@ -595,14 +595,13 @@ threadmain(int argc, char *argv[])
 	scrolling = 0;
 	oldbuttons = 0;
 	lastn = -1;
-	getwd(path, sizeof path);	
-	if(argc==2)
+	if(getwd(path, sizeof path) == nil)
+		sysfatal("getwd: %r");
+	if(argc==2 && access(argv[1], 0) >= 0)
 		snprint(path, sizeof path, abspath(path, argv[1]));
 	plumbfd = plumbopen("send", OWRITE|OCEXEC);
 	if(plumbfd<0)
 		sysfatal("plumbopen: %r");
-	readhome();
-	loaddirs();
 	if(initdraw(nil, nil, "vdir")<0)
 		sysfatal("initdraw: %r");
 	display->locking = 0;
@@ -615,6 +614,8 @@ threadmain(int argc, char *argv[])
 	alts[Emouse].c = mctl->c;
 	alts[Eresize].c = mctl->resizec;
 	alts[Ekeyboard].c = kctl->c;
+	readhome();
+	loaddirs();
 	initcolors();
 	initimages();
 	evtresize();
