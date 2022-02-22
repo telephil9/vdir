@@ -7,6 +7,7 @@
 #include <plumb.h>
 #include <bio.h>
 #include "icons.h"
+#include "theme.h"
 
 extern void alert(const char *title, const char *message, Mousectl *mctl, Keyboardctl *kctl);
 void redraw(void);
@@ -55,6 +56,8 @@ Image *toolbg;
 Image *toolfg;
 Image *viewbg;
 Image *viewfg;
+Image *selbg;
+Image *selfg;
 Image *scrollbg;
 Image *scrollfg;
 int sizew;
@@ -224,12 +227,28 @@ plumbfile(char *path, char *name)
 void
 initcolors(void)
 {
-	toolbg = allocimage(display, Rect(0,0,1,1), screen->chan, 1, 0xEFEFEFFF);
-	toolfg = display->black;
-	viewbg = display->white;
-	viewfg = display->black;
-	scrollbg = allocimage(display, Rect(0,0,1,1), screen->chan, 1, 0x999999FF);
-	scrollfg = display->white;
+	Theme *theme;
+
+	theme = loadtheme();
+	if(theme == nil){
+		toolbg = allocimage(display, Rect(0,0,1,1), screen->chan, 1, 0xEFEFEFFF);
+		toolfg = display->black;
+		viewbg = display->white;
+		viewfg = display->black;
+		selbg  = allocimage(display, Rect(0,0,1,1), screen->chan, 1, 0xEFEFEFFF);
+		selfg  = display->black;
+		scrollbg = allocimage(display, Rect(0,0,1,1), screen->chan, 1, 0x999999FF);
+		scrollfg = display->white;
+	}else{
+		toolbg = theme->back;
+		toolfg = theme->text;
+		viewbg = theme->back;
+		viewfg = theme->text;
+		selbg  = theme->border;
+		selfg  = theme->text;
+		scrollbg = theme->border;
+		scrollfg = theme->back;
+	}
 }
 
 Image*
@@ -274,13 +293,13 @@ mdate(Dir d)
 }
 
 Rectangle
-drawbutton(Point *p, Image *i)
+drawbutton(Point *p, Image *c, Image *i)
 {
 	Rectangle r;
 
 	p->x += Toolpadding;
 	r = Rect(p->x, p->y, p->x+16, p->y+16);
-	draw(screen, r, i, nil, ZP);
+	draw(screen, r, c, i, ZP);
 	p->x += 16+Toolpadding;
 	return r;
 }
@@ -308,30 +327,32 @@ drawdir(int n, int selected)
 {
 	char buf[255], *t;
 	Dir d;
-	Image *img;
+	Image *img, *bg, *fg;
 	Point p;
 	Rectangle r;
 	int dy;
 
 	if(offset+n>=ndirs)
 		return;
+	bg = selected ? selbg : viewbg;
+	fg = selected ? selfg : viewfg;
 	d = dirs[offset+n];
 	p = addpt(viewr.min, Pt(Toolpadding, Toolpadding));
 	p.y += n*lineh;
 	r = Rpt(p, addpt(p, Pt(Dx(viewr)-2*Toolpadding, lineh)));
-	draw(screen, r, selected?toolbg:viewbg, nil, ZP);
+	draw(screen, r, bg, nil, ZP);
 	t = mdate(d);
 	snprint(buf, sizeof buf, "%*lld  %s", sizew, d.length, t);
 	free(t);
 	img = (d.qid.type&QTDIR) ? folder : file;
 	p.y -= Padding;
 	dy = (lineh-12)/2;
-	draw(screen, Rect(p.x, p.y+dy, p.x+12, p.y+dy+12), img, nil, ZP);
+	draw(screen, Rect(p.x, p.y+dy, p.x+12, p.y+dy+12), fg, img, ZP);
 	p.x += 12+4+Padding;
 	p.y += Padding;
-	p = drawtext(p, viewfg, d.name, viewr.max.x - stringwidth(font, buf) - 2*Padding - Toolpadding);
+	p = drawtext(p, fg, d.name, viewr.max.x - stringwidth(font, buf) - 2*Padding - Toolpadding);
 	p.x = viewr.max.x - stringwidth(font, buf) - 2*Padding - Toolpadding;
-	string(screen, p, viewfg, ZP, font, buf);
+	string(screen, p, fg, ZP, font, buf);
 }
 
 void
@@ -352,21 +373,21 @@ redraw(void)
 	Point p;
 	int i, h, y;
 
-	draw(screen, screen->r, display->white, nil, ZP);
+	draw(screen, screen->r, viewbg, nil, ZP);
 	p = addpt(screen->r.min, Pt(0, Toolpadding));
 	draw(screen, toolr, toolbg, nil, ZP);
 	line(screen, Pt(toolr.min.x, toolr.max.y), toolr.max, 0, 0, 0, toolfg, ZP);
-	homer = drawbutton(&p, ihome);
-	cdr = drawbutton(&p, icd);
-	upr = drawbutton(&p, iup);
+	homer = drawbutton(&p, toolfg, ihome);
+	cdr = drawbutton(&p, toolfg, icd);
+	upr = drawbutton(&p, toolfg, iup);
 	p.x += Toolpadding;
 	p.y = toolr.min.y + (Toolpadding+16+Toolpadding-font->height)/2;
 	pathr = Rect(p.x, p.y, p.x + stringwidth(font, path), p.y + font->height);
 	p = drawtext(p, toolfg, path, screen->r.max.x - 2*(Toolpadding+16+Toolpadding));
 	p.x = screen->r.max.x - 2*(Toolpadding+16+Toolpadding);
 	p.y = screen->r.min.y + Toolpadding;
-	newdirr = drawbutton(&p, inewfolder);
-	newfiler = drawbutton(&p, inewfile);
+	newdirr = drawbutton(&p, toolfg, inewfolder);
+	newfiler = drawbutton(&p, toolfg, inewfile);
 	draw(screen, scrollr, scrollbg, nil, ZP);
 	if(ndirs>0){
 		h = ((double)nlines/ndirs)*Dy(scrollr);
@@ -374,7 +395,7 @@ redraw(void)
 		scrposr = Rect(scrollr.min.x, scrollr.min.y+y, scrollr.max.x-1, scrollr.min.y+y+h);
 	}else
 		scrposr = Rect(scrollr.min.x, scrollr.min.y, scrollr.max.x-1, scrollr.max.y);
-	draw(screen, scrposr, display->white, nil, ZP);
+	draw(screen, scrposr, scrollfg, nil, ZP);
 	for(i = 0; i<nlines && offset+i<ndirs; i++){
 		drawdir(i, 0);
 	}
