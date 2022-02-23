@@ -9,7 +9,7 @@
 #include "icons.h"
 #include "theme.h"
 
-extern void alert(const char *title, const char *message, Mousectl *mctl, Keyboardctl *kctl);
+extern void alert(const char *title, const char *message, const char *err, Mousectl *mctl, Keyboardctl *kctl);
 void redraw(void);
 
 enum
@@ -78,12 +78,12 @@ int oldbuttons;
 int lastn;
 
 void
-showerrstr(void)
+showerrstr(char *msg)
 {
 	char errbuf[ERRMAX];
 
 	errstr(errbuf, ERRMAX-1);
-	alert("Error", errbuf, mctl, kctl);
+	alert("Error", msg, errbuf, mctl, kctl);
 }
 
 void
@@ -127,7 +127,7 @@ loaddirs(void)
 
 	fd = open(path, OREAD);
 	if(fd<0){
-		showerrstr();
+		showerrstr("Unable to load directory");
 		return;
 	}
 	if(dirs!=nil)
@@ -163,7 +163,7 @@ cd(char *dir)
 	else
 		snprint(newpath, sizeof newpath, "%s/%s", path, dir);
 	if(access(newpath, 0)<0)
-		alert("Error", "Directory does not exist", mctl, kctl);
+		showerrstr("Directory does not exist");
 	else
 		snprint(path, sizeof path, abspath(path, newpath));
 	loaddirs();
@@ -177,12 +177,12 @@ mkdir(char *name)
 
 	p = smprint("%s/%s", path, name);
 	if(access(p, 0)>=0){
-		alert("Error", "Directory already exists", mctl, kctl);
+		showerrstr("Directory already exists");
 		goto cleanup;
 	}
 	fd = create(p, OREAD, DMDIR|0755);
 	if(fd<0){
-		showerrstr();
+		showerrstr("Unable to create directory");
 		goto cleanup;
 	}
 	close(fd);
@@ -199,12 +199,12 @@ touch(char *name)
 
 	p = smprint("%s/%s", path, name);
 	if(access(p, 0)>=0){
-		alert("Error", "File already exists", mctl, kctl);
+		showerrstr("File already exists");
 		goto cleanup;
 	}
 	fd = create(p, OREAD, 0644);
 	if(fd<0){
-		showerrstr();
+		showerrstr("Unable to create file");
 		goto cleanup;
 	}
 	close(fd);
@@ -216,8 +216,9 @@ cleanup:
 int
 doexec(char *cmd)
 {
-	int rc;
+	int rc, n;
 	Waitmsg *msg;
+	char *f[3];
 
 	rc = 0;
 	switch(rfork(RFPROC|RFFDG|RFREND)){
@@ -233,7 +234,11 @@ doexec(char *cmd)
 		msg = wait();
 		if(msg != nil && msg->msg[0] != 0){
 			rc = -1;
-			fprint(2, "error: %s\n", msg->msg); /* TODO: visual reporting */
+			n = gettokens(msg->msg, f, 3, ":");
+			if(n >= 3)
+				werrstr(f[2]);
+			else
+				werrstr(msg->msg);
 		}
 		if(msg != nil)
 			free(msg);
@@ -249,7 +254,7 @@ rm(char *name)
 
 	snprint(cmd, sizeof cmd, "rm -r %s/%s", path, name);
 	if(doexec(cmd) < 0)
-		alert("Error", "Cannot remove file/directory", mctl, kctl);
+		showerrstr("Cannot remove file/directory");
 	else
 		loaddirs();
 }
@@ -261,7 +266,7 @@ mv(char *from, char *to)
 
 	snprint(cmd, sizeof cmd, "mv %s/%s %s/%s", path, from, path, to);
 	if(doexec(cmd) < 0)
-		alert("Error", "Cannot rename file/directory", mctl, kctl);
+		showerrstr("Cannot rename file/directory");
 	else
 		loaddirs();
 }
@@ -277,7 +282,7 @@ plumbfile(char *path, char *name)
 	if(e)
 		plumbsendtext(plumbfd, "vdir", nil, path, name);
 	else{
-		alert("Error", "File does not exist anymore", mctl, kctl);
+		alert("Error", "File does not exist anymore", nil, mctl, kctl);
 		loaddirs();
 		redraw();
 	}

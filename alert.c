@@ -16,14 +16,14 @@ max(int a, int b)
 }
 
 void
-alert(const char *title, const char *message, Mousectl *mctl, Keyboardctl *kctl)
+alert(const char *title, const char *message, const char *err, Mousectl *mctl, Keyboardctl *kctl)
 {
 	Alt alts[3];
 	Rectangle r, sc;
 	Point o, p;
 	Image *b, *save, *bg, *fg;
 	Font *tf, *mf;
-	int done, h, w, tw, mw;
+	int done, h, w, tw, mw, ew;
 	Mouse m;
 	Rune k;
 
@@ -49,9 +49,12 @@ alert(const char *title, const char *message, Mousectl *mctl, Keyboardctl *kctl)
 	done = 0;
 	save = nil;
 	h = Padding+tf->height+mf->height+Padding;
+	if(err != nil)
+		h += mf->height;
 	tw = stringwidth(tf, title);
 	mw = stringwidth(mf, message);
-	w = Padding+max(tw, mw)+Padding;
+	ew = err != nil ? stringwidth(mf, err) : 0;
+	w = Padding+max(tw, max(mw, ew))+Padding;
 	b = screen;
 	sc = b->clipr;
 	replclipr(b, 0, b->r);
@@ -70,6 +73,11 @@ alert(const char *title, const char *message, Mousectl *mctl, Keyboardctl *kctl)
 		string(b, p, fg, ZP, tf, title);
 		p.y += tf->height;
 		string(b, p, fg, ZP, mf, message);
+		if(err != nil){
+			p.x = o.x + Padding;
+			p.y += mf->height;
+			string(b, p, fg, ZP, mf, err);
+		}
 		flushimage(display, 1);
 		if(b!=screen || !eqrect(screen->clipr, sc)){
 			freeimage(save);
