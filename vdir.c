@@ -27,6 +27,14 @@ enum
 	Ekeyboard,
 };
 
+enum
+{
+	Mdelete,
+	Mrename,
+};
+char *menu2str[] = { "delete", "rename", nil };
+Menu menu2 = { menu2str };
+
 const char ellipsis[] = "…";
 
 char *home;
@@ -203,6 +211,59 @@ touch(char *name)
 	loaddirs();
 cleanup:
 	free(p);
+}
+
+int
+doexec(char *cmd)
+{
+	int rc;
+	Waitmsg *msg;
+
+	rc = 0;
+	switch(rfork(RFPROC|RFFDG|RFREND)){
+	case -1:
+		rc = -1;
+		break;
+	case 0:
+		execl("/bin/rc", "rc", "-c", cmd, 0);
+		fprint(2, "execl failed: %r");
+		threadexitsall("execl");
+		break;
+	default:
+		msg = wait();
+		if(msg != nil && msg->msg[0] != 0){
+			rc = -1;
+			fprint(2, "error: %s\n", msg->msg); /* TODO: visual reporting */
+		}
+		if(msg != nil)
+			free(msg);
+		break;
+	}
+	return rc;
+}
+
+void
+rm(char *name)
+{
+	char cmd[300];
+
+	snprint(cmd, sizeof cmd, "rm -r %s/%s", path, name);
+	if(doexec(cmd) < 0)
+		alert("Error", "Cannot remove file/directory", mctl, kctl);
+	else
+		loaddirs();
+}
+
+void
+mv(char *from, char *to)
+{
+	char cmd[520];
+
+	snprint(cmd, sizeof cmd, "mv %s/%s %s/%s", path, from, path, to);
+	if(doexec(cmd) < 0)
+		alert("Error", "Cannot rename file/directory", mctl, kctl);
+	else
+		loaddirs();
 }
 
 int
@@ -527,7 +588,24 @@ evtmouse(Mouse m)
 			scrollup(dy);
 		}
 	}else if(m.buttons&2){
-		if(scrolling){
+		if(ptinrect(m.xy, viewr)){
+			n = indexat(m.xy);
+			if(n==-1)
+				return;
+			d = dirs[offset+n];
+			switch(menuhit(2, mctl, &menu2, nil)){
+			case Mdelete:
+				rm(d.name);
+				redraw();
+				break;
+			case Mrename:
+				if(enter("Rename to", buf, sizeof buf, mctl, kctl, nil)>0){
+					mv(d.name, buf);
+					redraw();
+				}
+				break;
+			}
+		}else if(scrolling){
 			if(nlines<ndirs){
 				offset = scrollclamp((m.xy.y - scrollr.min.y) * ndirs/Dy(scrollr));
 				redraw();
