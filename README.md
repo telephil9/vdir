@@ -26,11 +26,12 @@ Keyboard shortcuts are:
 Usage:
 ------
 Install with the usual ``mk install``  
-Run ``vdir [directory]``
+Run ``vdir [-r] [directory]``
+If the `-r` flag is passed, delete will recursively delete directories.
 
 Path plumbing:
 --------------
-When right-clicking the path, the path name is sent to plumber.
+When right-clicking the path in the toolbar, the path name is sent to plumber.
 This can be used to open a window in the directory for instance:
 ```
 src is vdir

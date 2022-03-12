@@ -29,10 +29,10 @@ enum
 
 enum
 {
-	Mdelete,
 	Mrename,
+	Mdelete,
 };
-char *menu2str[] = { "delete", "rename", nil };
+char *menu2str[] = { "rename", "delete", nil };
 Menu menu2 = { menu2str };
 
 const char ellipsis[] = "…";
@@ -76,6 +76,7 @@ int plumbfd;
 int scrolling;
 int oldbuttons;
 int lastn;
+int rmode;
 
 void
 showerrstr(char *msg)
@@ -252,7 +253,7 @@ rm(char *name)
 {
 	char cmd[300];
 
-	snprint(cmd, sizeof cmd, "rm -r %s/%s", path, name);
+	snprint(cmd, sizeof cmd, "rm %s %s/%s", rmode ? "-r" : "", path, name);
 	if(doexec(cmd) < 0)
 		showerrstr("Cannot remove file/directory");
 	else
@@ -684,6 +685,13 @@ evtmouse(Mouse m)
 }
 
 void
+usage(void)
+{
+	fprint(2, "usage: %s [-r] [path]\n", argv0);
+	exits("usage");
+}
+
+void
 threadmain(int argc, char *argv[])
 {
 	Mouse m;
@@ -699,10 +707,18 @@ threadmain(int argc, char *argv[])
 	scrolling = 0;
 	oldbuttons = 0;
 	lastn = -1;
+	rmode = 0;
+	ARGBEGIN{
+	case 'r':
+		++rmode;
+		break;
+	default:
+		usage();
+	}ARGEND;
 	if(getwd(path, sizeof path) == nil)
 		sysfatal("getwd: %r");
-	if(argc==2 && access(argv[1], 0) >= 0)
-		snprint(path, sizeof path, abspath(path, argv[1]));
+	if(argc==1 && access(argv[0], 0) >= 0)
+		snprint(path, sizeof path, abspath(path, argv[0]));
 	plumbfd = plumbopen("send", OWRITE|OCEXEC);
 	if(plumbfd<0)
 		sysfatal("plumbopen: %r");
