@@ -605,6 +605,7 @@ evtmouse(Mouse m)
 				redraw();
 				break;
 			case Mrename:
+				snprint(buf, sizeof buf, "%s", d.name);
 				if(enter("Rename to", buf, sizeof buf, mctl, kctl, nil)>0){
 					mv(d.name, buf);
 					redraw();
