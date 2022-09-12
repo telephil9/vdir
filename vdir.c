@@ -134,7 +134,12 @@ loaddirs(void)
 	if(dirs!=nil)
 		free(dirs);
 	ndirs = dirreadall(fd, &dirs);
-	qsort(dirs, ndirs, sizeof *dirs, (int(*)(void*,void*))dircmp);
+	if(ndirs > 0)
+		qsort(dirs, ndirs, sizeof *dirs, (int(*)(void*,void*))dircmp);
+	else{
+		ndirs = 0;
+		showerrstr("Unable to read directory");
+	}
 	offset = 0;
 	close(fd);
 	m = 1;
@@ -142,7 +147,7 @@ loaddirs(void)
 		if(dirs[i].length>m)
 			m=dirs[i].length;
 	}
-	sizew = 1+1+log(m)/log(10);
+	sizew = m == 0 ? 3 : 1+1+log(m)/log(10);
 }
 
 void
