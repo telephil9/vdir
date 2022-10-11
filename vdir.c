@@ -124,7 +124,8 @@ dircmp(Dir *a, Dir *b)
 void
 loaddirs(void)
 {
-	int fd, i, m;
+	int fd, i;
+	vlong m;
 
 	fd = open(path, OREAD);
 	if(fd<0){
