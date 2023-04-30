@@ -138,8 +138,9 @@ loaddirs(void)
 	if(ndirs > 0)
 		qsort(dirs, ndirs, sizeof *dirs, (int(*)(void*,void*))dircmp);
 	else{
+		if(ndirs < 0)
+			showerrstr("Unable to read directory");
 		ndirs = 0;
-		showerrstr("Unable to read directory");
 	}
 	offset = 0;
 	close(fd);
@@ -258,24 +259,39 @@ void
 rm(char *name)
 {
 	char cmd[300];
+	char *p, *qp;
 
-	snprint(cmd, sizeof cmd, "rm %s %s/%s", rmode ? "-r" : "", path, name);
+	p = smprint("%s/%s", path, name);
+	qp = quotestrdup(p);
+	snprint(cmd, sizeof cmd, "rm %s %s", rmode ? "-r" : "", qp);
 	if(doexec(cmd) < 0)
 		showerrstr("Cannot remove file/directory");
 	else
 		loaddirs();
+	free(qp);
+	free(p);
 }
 
 void
 mv(char *from, char *to)
 {
 	char cmd[520];
+	char *fp, *tp, *qfp, *qtp;
 
-	snprint(cmd, sizeof cmd, "mv %s/%s %s/%s", path, from, path, to);
+	fp = smprint("%s/%s", path, from);
+	tp = smprint("%s/%s", path, to);
+	qfp = quotestrdup(fp);
+	qtp = quotestrdup(tp);
+
+	snprint(cmd, sizeof cmd, "mv %s %s", qfp, qtp);
 	if(doexec(cmd) < 0)
 		showerrstr("Cannot rename file/directory");
 	else
 		loaddirs();
+	free(qtp);
+	free(qfp);
+	free(tp);
+	free(fp);
 }
 
 int
