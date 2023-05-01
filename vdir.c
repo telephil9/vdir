@@ -639,6 +639,9 @@ evtmouse(Mouse m)
 				offset = scrollclamp((m.xy.y - scrollr.min.y) * ndirs/Dy(scrollr));
 				redraw();
 			}
+		}else if(ptinrect(m.xy, pathr)){
+			loaddirs();
+			redraw();
 		}
 	}if((m.buttons&4) && oldbuttons == 0){
 		if(scrolling){
