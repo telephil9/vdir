@@ -25,6 +25,7 @@ enum
 	Emouse,
 	Eresize,
 	Ekeyboard,
+	Eplumb,
 };
 
 enum
@@ -38,7 +39,7 @@ Menu menu2 = { menu2str };
 const char ellipsis[] = "…";
 
 char *home;
-char path[256];
+char path[4096];
 Dir* dirs;
 long ndirs;
 Mousectl *mctl;
@@ -162,10 +163,10 @@ up(void)
 void
 cd(char *dir)
 {
-	char newpath[256] = {0};
+	char newpath[4096] = {0};
 
 	if(dir == nil)
-		snprint(newpath, sizeof path, home);
+		snprint(newpath, sizeof newpath, home);
 	else if(dir[0] == '/')
 		snprint(newpath, sizeof newpath, dir);
 	else
@@ -603,7 +604,7 @@ evtmouse(Mouse m)
 {
 	int n, dy;
 	Dir d;
-	char buf[256] = {0};
+	char buf[4096] = {0};
 
 	if(oldbuttons == 0 && m.buttons != 0 && ptinrect(m.xy, scrollr))
 		scrolling = 1;
@@ -711,6 +712,29 @@ evtmouse(Mouse m)
 }
 
 void
+plumbdir(void *c)
+{
+	Plumbmsg *m;
+	char *s;
+	int f;
+
+	if((f = plumbopen("vdir", OREAD)) >= 0){
+		while((m = plumbrecv(f)) != nil){
+			s = m->data;
+			if(*s != '/' && m->wdir != nil)
+				s = smprint("%s/%.*s", m->wdir, m->ndata, m->data);
+			else
+				s = smprint("%.*s", m->ndata, m->data);
+			plumbfree(m);
+			if(sendp(c, s) != 1)
+				break;
+		}
+	}
+
+	threadexits(nil);
+}
+
+void
 usage(void)
 {
 	fprint(2, "usage: %s [-r] [path]\n", argv0);
@@ -722,10 +746,12 @@ threadmain(int argc, char *argv[])
 {
 	Mouse m;
 	Rune k;
+	char *d;
 	Alt alts[] = {
 		{ nil, &m,  CHANRCV },
 		{ nil, nil, CHANRCV },	
 		{ nil, &k,  CHANRCV },
+		{ nil, &d,  CHANRCV },
 		{ nil, nil, CHANEND },
 	};
 
@@ -760,6 +786,8 @@ threadmain(int argc, char *argv[])
 	alts[Emouse].c = mctl->c;
 	alts[Eresize].c = mctl->resizec;
 	alts[Ekeyboard].c = kctl->c;
+	alts[Eplumb].c = chancreate(sizeof(d), 1);
+	proccreate(plumbdir, alts[Eplumb].c, 4096);
 	readhome();
 	loaddirs();
 	initcolors();
@@ -775,6 +803,11 @@ threadmain(int argc, char *argv[])
 			break;
 		case Ekeyboard:
 			evtkey(k);
+			break;
+		case Eplumb:
+			cd(d);
+			free(d);
+			redraw();
 			break;
 		}
 	}

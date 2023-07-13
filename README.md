@@ -1,6 +1,6 @@
 vdir
 =====
-A minimalistic visual directory browser for Plan9.
+A minimalistic visual directory browser for Plan 9.
 
 ![vdir](vdir.png)
 
@@ -31,13 +31,25 @@ If the `-r` flag is passed, delete will recursively delete directories.
 
 Path plumbing:
 --------------
-When right-clicking the path in the toolbar, the path name is sent to plumber.
-This can be used to open a window in the directory for instance:
+When right-clicking the path in the toolbar, or pressing Space, the
+path name is sent to plumber.  This can be used to open a window in
+the directory for instance:
+
 ```
 src is vdir
 type is text
 arg isdir $data
 plumb start window -cd $data rc
+```
+
+In addition, a plumb rule can be installed so that plumbing a
+directory will change the current path of a running vdir:
+
+```
+type is text
+arg isdir $data
+plumb to vdir
+plumb client window vdir
 ```
 
 Disclaimer:
