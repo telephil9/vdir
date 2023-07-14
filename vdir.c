@@ -38,6 +38,7 @@ Menu menu2 = { menu2str };
 
 const char ellipsis[] = "…";
 
+int mainstacksize = 32768;
 char *home;
 char path[4096];
 Dir* dirs;
