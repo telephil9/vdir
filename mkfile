@@ -1,6 +1,6 @@
 </$objtype/mkfile
 
-BIN=$home/bin/$objtype
+BIN=/$objtype/bin
 TARG=vdir
 OFILES=vdir.$O alert.$O theme.$O
 HFILES=icons.h
