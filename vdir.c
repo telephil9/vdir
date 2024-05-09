@@ -10,6 +10,7 @@
 #include "theme.h"
 
 extern void alert(const char *message, const char *err, Mousectl *mctl, Keyboardctl *kctl);
+extern int confirm(const char *message, Mousectl *mctl, Keyboardctl *kctl);
 void redraw(void);
 
 enum
@@ -78,7 +79,6 @@ int plumbfd;
 int scrolling;
 int oldbuttons;
 int lastn;
-int rmode;
 
 void
 showerrstr(char *msg)
@@ -258,14 +258,20 @@ doexec(char *cmd)
 }
 
 void
-rm(char *name)
+rm(Dir d)
 {
-	char cmd[300];
+	char cmd[300], buf[1024] = {0};
 	char *p, *qp;
 
-	p = smprint("%s/%s", path, name);
+	if(d.qid.type&QTDIR)
+		snprint(buf, sizeof buf, "Delete directory '%s' and its subdirectories ?", d.name);
+	else
+		snprint(buf, sizeof buf, "Delete file '%s' ?", d.name);
+	if(!confirm(buf, mctl, kctl))
+		return;
+	p = smprint("%s/%s", path, d.name);
 	qp = quotestrdup(p);
-	snprint(cmd, sizeof cmd, "rm %s %s >/dev/null >[2=1]", rmode ? "-r" : "", qp);
+	snprint(cmd, sizeof cmd, "rm -r %s >/dev/null >[2=1]", qp);
 	if(doexec(cmd) < 0)
 		showerrstr("Cannot remove file/directory");
 	else
@@ -625,7 +631,7 @@ evtmouse(Mouse m)
 			d = dirs[offset+n];
 			switch(menuhit(2, mctl, &menu2, nil)){
 			case Mdelete:
-				rm(d.name);
+				rm(d);
 				redraw();
 				break;
 			case Mrename:
@@ -760,11 +766,7 @@ threadmain(int argc, char *argv[])
 	scrolling = 0;
 	oldbuttons = 0;
 	lastn = -1;
-	rmode = 0;
 	ARGBEGIN{
-	case 'r':
-		++rmode;
-		break;
 	default:
 		usage();
 	}ARGEND;
