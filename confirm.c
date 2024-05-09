@@ -8,12 +8,12 @@
 enum { Padding = 12, };
 
 int
-confirm(const char *message, Mousectl *mctl, Keyboardctl *kctl)
+confirm(const char *message, Mousectl *mctl, Keyboardctl *kctl, Image *bg, Image *fg, Image *hi)
 {
 	Alt alts[3];
 	Rectangle r, sc;
 	Point o, p;
-	Image *b, *save, *bg, *fg, *hi;
+	Image *b, *save;
 	int done, rc, h, w;
 	Mouse m;
 	Rune k;
@@ -29,9 +29,6 @@ confirm(const char *message, Mousectl *mctl, Keyboardctl *kctl)
 	alts[2].v  = nil;
 	while(nbrecv(kctl->c, nil)==1)
 		;
-	bg = allocimage(display, Rect(0,0,1,1), screen->chan, 1, 0xffffffff);
-	fg = allocimage(display, Rect(0,0,1,1), screen->chan, 1, 0x000000ff);
-	hi = allocimage(display, Rect(0,0,1,1), screen->chan, 1, DGreygreen);
 	done = 0;
 	rc = 0;
 	save = nil;
@@ -91,7 +88,5 @@ confirm(const char *message, Mousectl *mctl, Keyboardctl *kctl)
 			
 	}
 	replclipr(b, 0, sc);
-	freeimage(bg);
-	freeimage(fg);
 	return rc;
 }

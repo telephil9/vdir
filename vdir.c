@@ -10,7 +10,7 @@
 #include "theme.h"
 
 extern void alert(const char *message, const char *err, Mousectl *mctl, Keyboardctl *kctl);
-extern int confirm(const char *message, Mousectl *mctl, Keyboardctl *kctl);
+extern int confirm(const char *message, Mousectl *mctl, Keyboardctl *kctl, Image *bg, Image *fg, Image *hi);
 void redraw(void);
 
 enum
@@ -71,6 +71,7 @@ Image *selbg;
 Image *selfg;
 Image *scrollbg;
 Image *scrollfg;
+Image *high;
 int sizew;
 int lineh;
 int nlines;
@@ -267,7 +268,7 @@ rm(Dir d)
 		snprint(buf, sizeof buf, "Delete directory '%s' and its subdirectories ?", d.name);
 	else
 		snprint(buf, sizeof buf, "Delete file '%s' ?", d.name);
-	if(!confirm(buf, mctl, kctl))
+	if(!confirm(buf, mctl, kctl, viewbg, viewfg, high))
 		return;
 	p = smprint("%s/%s", path, d.name);
 	qp = quotestrdup(p);
@@ -336,6 +337,7 @@ initcolors(void)
 		selfg  = display->black;
 		scrollbg = allocimage(display, Rect(0,0,1,1), screen->chan, 1, 0x999999FF);
 		scrollfg = display->white;
+		high = allocimage(display, Rect(0,0,1,1), screen->chan, 1, DGreygreen);
 	}else{
 		toolbg = theme->back;
 		toolfg = theme->text;
@@ -345,6 +347,7 @@ initcolors(void)
 		selfg  = theme->text;
 		scrollbg = theme->border;
 		scrollfg = theme->back;
+		high = theme->high;
 	}
 }
 
