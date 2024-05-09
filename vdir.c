@@ -226,9 +226,9 @@ cleanup:
 int
 doexec(char *cmd)
 {
-	int rc, n;
+	int rc;
 	Waitmsg *msg;
-	char *f[3];
+	char *p;
 
 	rc = 0;
 	switch(rfork(RFPROC|RFFDG|RFREND)){
@@ -244,9 +244,9 @@ doexec(char *cmd)
 		msg = wait();
 		if(msg != nil && msg->msg[0] != 0){
 			rc = -1;
-			n = gettokens(msg->msg, f, 3, ":");
-			if(n >= 3)
-				werrstr(f[2]);
+			p = strchr(msg->msg, ':');
+			if(p != nil)
+				werrstr(p+2);
 			else
 				werrstr(msg->msg);
 		}
@@ -265,7 +265,7 @@ rm(char *name)
 
 	p = smprint("%s/%s", path, name);
 	qp = quotestrdup(p);
-	snprint(cmd, sizeof cmd, "rm %s %s", rmode ? "-r" : "", qp);
+	snprint(cmd, sizeof cmd, "rm %s %s >/dev/null >[2=1]", rmode ? "-r" : "", qp);
 	if(doexec(cmd) < 0)
 		showerrstr("Cannot remove file/directory");
 	else
@@ -285,7 +285,7 @@ mv(char *from, char *to)
 	qfp = quotestrdup(fp);
 	qtp = quotestrdup(tp);
 
-	snprint(cmd, sizeof cmd, "mv %s %s", qfp, qtp);
+	snprint(cmd, sizeof cmd, "mv %s %s >/dev/null >[2=1]", qfp, qtp);
 	if(doexec(cmd) < 0)
 		showerrstr("Cannot rename file/directory");
 	else
