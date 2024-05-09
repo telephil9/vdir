@@ -9,7 +9,7 @@
 #include "icons.h"
 #include "theme.h"
 
-extern void alert(const char *title, const char *message, const char *err, Mousectl *mctl, Keyboardctl *kctl);
+extern void alert(const char *message, const char *err, Mousectl *mctl, Keyboardctl *kctl);
 void redraw(void);
 
 enum
@@ -86,7 +86,7 @@ showerrstr(char *msg)
 	char errbuf[ERRMAX];
 
 	errstr(errbuf, ERRMAX-1);
-	alert("Error", msg, errbuf, mctl, kctl);
+	alert(msg, errbuf, mctl, kctl);
 }
 
 void
@@ -307,7 +307,7 @@ plumbfile(char *path, char *name)
 	if(e)
 		plumbsendtext(plumbfd, "vdir", nil, path, name);
 	else{
-		alert("Error", "File does not exist anymore", nil, mctl, kctl);
+		alert("File does not exist anymore", nil, mctl, kctl);
 		loaddirs();
 		redraw();
 	}

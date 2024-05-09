@@ -6,8 +6,6 @@
 #include <keyboard.h>
 
 enum { Padding = 12, };
-char Titlefont[] = "/lib/font/bit/dejavusansbd/unicode.14.font";
-char Messagefont[] = "/lib/font/bit/dejavusans/unicode.14.font";
 
 int
 max(int a, int b)
@@ -16,14 +14,13 @@ max(int a, int b)
 }
 
 void
-alert(const char *title, const char *message, const char *err, Mousectl *mctl, Keyboardctl *kctl)
+alert(const char *message, const char *err, Mousectl *mctl, Keyboardctl *kctl)
 {
 	Alt alts[3];
 	Rectangle r, sc;
 	Point o, p;
 	Image *b, *save, *bg, *fg;
-	Font *tf, *mf;
-	int done, h, w, tw, mw, ew;
+	int done, h, w, mw, ew;
 	Mouse m;
 	Rune k;
 
@@ -40,21 +37,14 @@ alert(const char *title, const char *message, const char *err, Mousectl *mctl, K
 		;
 	bg = allocimage(display, Rect(0,0,1,1), screen->chan, 1, 0xf8d7daff);
 	fg = allocimage(display, Rect(0,0,1,1), screen->chan, 1, 0x721c24ff);
-	tf = openfont(display, Titlefont);
-	if(tf==nil)
-		sysfatal("openfont: %r");
-	mf = openfont(display, Messagefont);
-	if(mf==nil)
-		sysfatal("openfont: %r");
 	done = 0;
 	save = nil;
-	h = Padding+tf->height+mf->height+Padding;
+	h = Padding+font->height+Padding;
 	if(err != nil)
-		h += mf->height;
-	tw = stringwidth(tf, title);
-	mw = stringwidth(mf, message);
-	ew = err != nil ? stringwidth(mf, err) : 0;
-	w = Padding+max(tw, max(mw, ew))+Padding;
+		h += font->height;
+	mw = stringwidth(font, message);
+	ew = err != nil ? stringwidth(font, err) : 0;
+	w = Padding+max(mw, ew)+Padding;
 	b = screen;
 	sc = b->clipr;
 	replclipr(b, 0, b->r);
@@ -70,13 +60,11 @@ alert(const char *title, const char *message, const char *err, Mousectl *mctl, K
 		draw(b, r, bg, nil, ZP);
 		border(b, r, 2, fg, ZP);
 		p = addpt(o, Pt(Padding, Padding));
-		string(b, p, fg, ZP, tf, title);
-		p.y += tf->height;
-		string(b, p, fg, ZP, mf, message);
+		string(b, p, fg, ZP, font, message);
 		if(err != nil){
 			p.x = o.x + Padding;
-			p.y += mf->height;
-			string(b, p, fg, ZP, mf, err);
+			p.y += font->height;
+			string(b, p, fg, ZP, font, err);
 		}
 		flushimage(display, 1);
 		if(b!=screen || !eqrect(screen->clipr, sc)){
@@ -107,6 +95,4 @@ alert(const char *title, const char *message, const char *err, Mousectl *mctl, K
 	replclipr(b, 0, sc);
 	freeimage(bg);
 	freeimage(fg);
-	freefont(tf);
-	freefont(mf);
 }
